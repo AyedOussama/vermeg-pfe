@@ -1,0 +1,191 @@
+server:
+  port: 7002
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  application:
+    name: user-service
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+  data:
+    mongodb:
+      host: ${MONGODB_HOST:localhost}
+      port: ${MONGODB_PORT:27017}
+      database: ${MONGODB_DATABASE:vermegPlatform}
+      username: ${MONGODB_USERNAME:admin}
+      password: ${MONGODB_PASSWORD:admin}
+      authentication-database: ${MONGODB_AUTH_DB:admin}
+
+    # === CONFIGURATION DE BASE RABBITMQ ===
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    connection-timeout: 5000
+    requested-heartbeat: 30
+  # === CONFIGURATION RABBITMQ POUR SPRING CLOUD STREAM ===
+  cloud:
+    function:
+      definition: processCvParsedEvent # Nom de la fonction Consumer
+    stream:
+      rabbit:
+        # Configuration améliorée pour éviter les EOFException
+        nodes: ${RABBITMQ_NODES:localhost:5672}
+        username: ${RABBITMQ_USERNAME:guest}
+        password: ${RABBITMQ_PASSWORD:guest}
+        virtual-host: /
+        connection-timeout: 5000
+        requested-heartbeat: 30
+        connection-recovery-interval: 5000
+        # Options supplémentaires pour la stabilité
+        publisher-confirms: true
+        publisher-returns: true
+        mandatory: true
+      bindings:
+        # Configuration de l'entrée (Consumer) pour les événements CV_PARSED
+        processCvParsedEvent-in-0:
+          destination: ai-results # Exchange source (même que ai-processing-service)
+          group: user-service-group # Groupe de consommateurs
+          content-type: application/json
+          consumer:
+            binding-routing-key: cv.parsed # Clé de routage pour écouter les CV analysés
+            acknowledge-mode: manual # Acknowledgment manuel pour garantir le traitement
+            max-attempts: 3 # Nombre de tentatives en cas d'échec
+            back-off-initial-interval: 1000 # 1 seconde
+            back-off-max-interval: 10000 # 10 secondes
+            back-off-multiplier: 2.0
+            auto-bind-dlq: true # Créer automatiquement une DLQ
+            dlq-name: user-service-cv-enrichment-dlq # Nom de la Dead Letter Queue
+
+# === CONFIGURATION DOCUMENT SERVICE ===
+document-service:
+  base-url: ${DOCUMENT_SERVICE_URL:http://localhost:7010/documents}
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}/protocol/openid-connect/certs
+      client:
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID:gateway-client}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:NcZPp1SjdZcKpCboLwLgTp9NXOQ1QR2i}
+            authorization-grant-type: client_credentials
+            scope: openid,profile,email
+          keycloak-client-creds:
+            client-id: ${USER_SERVICE_CLIENT_ID:user-service-client}
+            client-secret: ${USER_SERVICE_CLIENT_SECRET:PpYacJA4QjMVU3RUFp8Y4Mx4uKEp0geC}
+            authorization-grant-type: client_credentials
+            scope: openid,profile,email
+            provider: keycloak
+        provider:
+          keycloak:
+            issuer-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}
+            token-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}/protocol/openid-connect/token
+
+# Configuration pour les appels vers auth-service
+auth-service:
+  url: ${AUTH_SERVICE_URL:http://localhost:7001}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+    # Optimisations pour développement (réduire en production)
+    registry-fetch-interval-seconds: 10
+    instance-info-replication-interval-seconds: 10
+  instance:
+    preferIpAddress: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    # Optimisations pour développement
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    # Métadonnées utiles pour le monitoring
+    metadata-map:
+      version: "@project.version@"
+      description: "User management service for Vermeg recruitment platform"
+      management.context-path: /actuator
+
+logging:
+  level:
+    root: INFO
+    com.PFE2025: DEBUG
+    org.springframework.security: DEBUG
+    org.springframeckerwork.web: DEBUG
+    feign: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    with-credentials: true
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+  show-actuator: false
+  use-management-port: false
+  packages-to-scan: com.PFE2025.user_service.controller
+  paths-to-match: /**
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 30s
+        failure-rate-threshold: 50
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+  retry:
+    instances:
+      auth-service:
+        max-attempts: 3
+        wait-duration: 1s
+        retry-exceptions:
+          - feign.FeignException
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.client.ResourceAccessException
+
+# Configuration Feign pour les appels HTTP
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: full
+      auth-service:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: full

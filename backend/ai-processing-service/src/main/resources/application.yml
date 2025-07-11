@@ -1,0 +1,123 @@
+server:
+  port: 7011
+
+spring:
+  application:
+    name: ai-processing-service
+
+  # --- Configuration RabbitMQ via Spring Cloud Stream ---
+  cloud:
+    function:
+      definition: processDocumentEvent # Nom de la fonction Consumer
+    stream:
+      rabbit:
+        binder:
+          # Utiliser des variables d'environnement ou un config server
+          nodes: ${RABBITMQ_NODES:localhost:5672}
+          username: ${RABBITMQ_USERNAME:guest}
+          password: ${RABBITMQ_PASSWORD:guest}
+      bindings:
+        # Configuration de l'entrée (Consumer)
+        processDocumentEvent-in-0:
+          destination: document-events # Nom de l'exchange source
+          group: ai-processing-group # Nom du groupe de consommateurs (important pour la répartition de charge)
+          content-type: application/json
+          consumer:
+            binding-routing-key: document.cv.uploaded # Clé de routage pour écouter cet événement spécifique
+            # Configuration d'acknowledgment pour garantir la suppression après traitement réussi
+            acknowledge-mode: manual # Le message n'est supprimé qu'après acknowledgment explicite
+            # Options de retry et dead-lettering (RECOMMANDE)
+            max-attempts: 3 # Nombre de tentatives en cas d'échec
+            back-off-initial-interval: 1000 # 1 seconde
+            back-off-max-interval: 10000 # 10 secondes
+            back-off-multiplier: 2.0
+            auto-bind-dlq: true # Créer et lier automatiquement une DLQ
+            dlq-name: ai-processing-dlq # Nom de la Dead Letter Queue
+
+        # Configuration de la sortie (Producer)
+        cvParsed-out-0:
+          destination: ai-results # Exchange séparé pour les résultats d'analyse IA
+          content-type: application/json
+          producer:
+            routing-key-expression: " 'cv.parsed' " # Clé de routage pour cet événement
+            exchange-type: topic # Type d'exchange (doit correspondre à celui utilisé par les consommateurs)
+            # Configuration pour créer automatiquement la queue de test
+            required-groups: cv-analysis # Crée automatiquement une queue pour tester
+
+        # Binding pour les erreurs de traitement
+        processingFailed-out-0:
+          destination: ai-errors # Exchange dédié aux erreurs de traitement IA
+          content-type: application/json
+          producer:
+            routing-key-expression: " 'cv.processing.failed' " # Clé de routage pour les erreurs
+            exchange-type: topic
+
+
+
+# --- Configuration Eureka Client ---
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    preferIpAddress: true
+
+# --- Configuration API Together AI ---
+together-ai:
+
+  api-key: ${TOGETHER_API_KEY:ab9ef70a8bfbb35d9c1bb13894bac8e4dddf44495565c318388cdd5d91b0c051} # OBLIGATOIRE: Définir TOGETHER_API_KEY dans l'environnement
+  model: ${TOGETHER_MODEL:meta-llama/Llama-3.3-70B-Instruct-Turbo-Free}
+  base-url: ${TOGETHER_BASE_URL:https://api.together.xyz/v1}
+  chat-endpoint: /chat/completions
+  # Optionnel: timeouts
+  # connect-timeout-ms: 5000
+  # read-timeout-ms: 60000
+
+# --- Configuration pour appeler Document Management Service ---
+document-service:
+  # Endpoint non sécurisé pour télécharger les documents
+  base-url: ${DOCUMENT_SERVICE_URL:http://localhost:7010/documents}
+  download-path: "/{id}/download"
+  # Optionnel: timeouts
+  # connect-timeout-ms: 3000
+  # read-timeout-ms: 30000
+
+# --- Configuration Actuator & Management ---
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, loggers # Exposer loggers peut être utile pour debug
+  endpoint:
+    health:
+      show-details: when_authorized # Ou 'always' en dev, 'never' en prod
+      probes:
+        enabled: true # Activer les probes K8s
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# --- Configuration Logging ---
+logging:
+  level:
+    root: INFO
+    com.PFE2025.ai_processing_service: DEBUG # Notre code en DEBUG
+    org.springframework.web.reactive.function.client: TRACE # Pour voir les détails des appels WebClient
+    org.springframework.cloud.stream: INFO
+    org.springframework.security.oauth2.jwt: TRACE
+    org.springframework.security.oauth2.server.resource.authentication: DEBUG
+    org.apache.tika: WARN # Moins de logs de Tika
+    reactor.netty.http.client: INFO # Moins de bruit Netty
+  pattern:
+    # Format de log incluant le nom de l'app et les IDs de trace (si Zipkin/Sleuth activé)
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+# --- Configuration Langue par Défaut ---
+language:
+  detection:
+    default: en # Langue par défaut si la détection échoue ou est incertaine

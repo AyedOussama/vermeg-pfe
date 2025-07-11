@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silent Check SSO</title>
+    <script>
+        // Cette page est utilisée par Keycloak pour la vérification silencieuse de l'état d'authentification
+        // Elle reçoit les jetons et les transmet au parent via postMessage
+        
+        // Fonction pour extraire les paramètres d'URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        // Obtenir l'origine parent à partir de la référence
+        var origin = getUrlParameter('origin') || document.referrer;
+        
+        // Capturer les paramètres d'authentification
+        var message = {
+            type: 'AUTH_RESPONSE',
+            token: getUrlParameter('token'),
+            error: getUrlParameter('error'),
+            state: getUrlParameter('state'),
+            refreshToken: getUrlParameter('refresh_token'),
+            idToken: getUrlParameter('id_token'),
+            timeSkew: getUrlParameter('time_skew')
+        };
+        
+        // Envoyer les informations au parent
+        if (window.parent && origin) {
+            window.parent.postMessage(JSON.stringify(message), origin);
+        }
+    </script>
+</head>
+<body>
+    <!-- Page intentionnellement vide -->
+</body>
+</html>

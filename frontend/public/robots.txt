@@ -1,0 +1,15 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /hr-admin/
+Disallow: /project-leader/
+Disallow: /ceo/
+Disallow: /candidate/
+
+Allow: /
+Allow: /jobs
+Allow: /process
+Allow: /about
+Allow: /login
+Allow: /register

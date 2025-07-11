@@ -1,0 +1,770 @@
+@import "tailwindcss";
+@import "../../styles/scrollbar.css";
+
+/* Smooth scrolling for section navigation */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Modern Vermeg CSS Variables - Red, Black, White Theme */
+:root {
+  --vermeg-primary: #dc2626;
+  --vermeg-secondary: #b91c1c;
+  --vermeg-accent: #ef4444;
+  --vermeg-neutral: #6b7280;
+  --vermeg-dark: #000000;
+  --vermeg-light: #ffffff;
+
+  /* Enhanced gradient variables for modern design */
+  --vermeg-gradient-primary: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  --vermeg-gradient-hero: linear-gradient(135deg, #000000 0%, #1f2937 50%, #dc2626 100%);
+  --vermeg-gradient-accent: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+  --vermeg-gradient-dark: linear-gradient(135deg, #000000 0%, #374151 100%);
+  --vermeg-gradient-light: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+
+  /* Role-based theme variables */
+  --color-primary: #DC2626;
+  --color-secondary: #B91C1C;
+  --color-accent: #EF4444;
+  --color-background: #FFFFFF;
+  --color-text: #000000;
+}
+
+/* Role-based theme classes */
+.theme-candidate {
+  --color-primary: #EF4444;
+  --color-secondary: #DC2626;
+  --color-accent: #F87171;
+  --color-background: #FEF2F2;
+  --color-text: #991B1B;
+}
+
+.theme-project-leader {
+  --color-primary: #16A34A;
+  --color-secondary: #15803D;
+  --color-accent: #22C55E;
+  --color-background: #F0FDF4;
+  --color-text: #14532D;
+}
+
+.theme-rh {
+  --color-primary: #EA580C;
+  --color-secondary: #C2410C;
+  --color-accent: #FB923C;
+  --color-background: #FFF7ED;
+  --color-text: #9A3412;
+}
+
+.theme-ceo {
+  --color-primary: #8B5CF6;
+  --color-secondary: #7C3AED;
+  --color-accent: #A78BFA;
+  --color-background: #F5F3FF;
+  --color-text: #5B21B6;
+}
+
+/* Modern base configuration */
+body {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  background-color: var(--vermeg-light);
+  color: var(--vermeg-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+/* Enhanced modern utilities for red, black, white theme */
+.bg-vermeg-gradient {
+  background: var(--vermeg-gradient-primary);
+}
+
+.bg-vermeg-dark-gradient {
+  background: var(--vermeg-gradient-dark);
+}
+
+.bg-vermeg-light-gradient {
+  background: var(--vermeg-gradient-light);
+}
+
+.text-vermeg-primary {
+  color: var(--vermeg-primary);
+}
+
+.text-vermeg-dark {
+  color: var(--vermeg-dark);
+}
+
+.text-vermeg-light {
+  color: var(--vermeg-light);
+}
+
+.border-vermeg-primary {
+  border-color: var(--vermeg-primary);
+}
+
+/* Modern shadow utilities */
+.shadow-vermeg {
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.15);
+}
+
+.shadow-vermeg-lg {
+  box-shadow: 0 20px 40px rgba(220, 38, 38, 0.2);
+}
+
+.shadow-dark {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.shadow-dark-lg {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== COMPOSANTS PERSONNALISÉS ===== */
+
+/* Styles de bouton personnalisés */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:focus {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.5);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background-color: var(--color-primary, #dc2626);
+  color: white;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-secondary, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary:focus {
+  box-shadow: 0 0 0 2px rgba(var(--color-primary), 0.5);
+}
+
+/* Role-based button styles */
+.btn-role-primary {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-role-primary:hover {
+  background-color: var(--color-secondary);
+  border-color: var(--color-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-role-secondary {
+  background-color: transparent;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-role-secondary:hover {
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-secondary:focus {
+  box-shadow: 0 0 0 2px rgba(156, 163, 175, 0.5);
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid #dc2626;
+  color: #dc2626;
+}
+
+.btn-outline:hover {
+  background-color: #fef2f2;
+}
+
+.btn-outline:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+}
+
+/* Styles de carte personnalisés */
+.card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  transform: translateY(-0.25rem);
+}
+
+/* Enhanced card styles */
+.card-enhanced {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-enhanced:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-role-accent {
+  border-left: 4px solid var(--color-primary);
+}
+
+/* Enhanced hover effects */
+.hover-lift {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Styles de formulaire personnalisés */
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.form-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--color-primary), 0.5);
+  border-color: var(--color-primary);
+}
+
+/* Enhanced form styles */
+.form-input-enhanced {
+  transition: all 0.2s ease-in-out;
+  border: 2px solid #e5e7eb;
+}
+
+.form-input-enhanced:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary), 0.1);
+  outline: none;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Classes d'animation et de transition */
+.transition-slide {
+  transform: translateX(0);
+  transition: all 0.3s ease;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+/* Support de layout spécifique */
+.container-custom {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container-custom {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.section-padding {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+@media (min-width: 768px) {
+  .section-padding {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+}
+
+/* Typographie personnalisée */
+.heading-1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 768px) {
+  .heading-1 {
+    font-size: 3rem;
+  }
+}
+
+.heading-2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .heading-2 {
+    font-size: 2.25rem;
+  }
+}
+
+.heading-3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.text-body {
+  font-size: 1rem;
+  color: #4b5563;
+}
+
+/* ===== ANIMATIONS PERSONNALISÉES ===== */
+
+/* Animation de la barre de progression Vermeg */
+.loading-bar {
+  background: linear-gradient(90deg, transparent, var(--vermeg-red), transparent);
+  animation: loading-bar-slide 2s ease-in-out infinite;
+}
+
+/* Animation de pulsation Vermeg */
+.loading-pulse {
+  animation: vermeg-pulse 2s ease-in-out infinite;
+}
+
+/* Skeleton avec animation de vague */
+.skeleton-wave {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s infinite;
+}
+
+/* Skeleton sombre pour les thèmes sombres */
+.skeleton-dark {
+  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s infinite;
+}
+
+/* Points animés Vermeg */
+.dots-vermeg {
+  animation: dots-bounce 1.4s ease-in-out infinite;
+}
+
+/* Rotation douce personnalisée */
+.spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Effet de respiration pour les éléments de chargement */
+.breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* ===== STYLES MATERIAL UI ===== */
+
+/* Modern Material UI adjustments */
+.MuiCircularProgress-colorPrimary {
+  color: var(--vermeg-primary) !important;
+}
+
+.MuiCircularProgress-root {
+  color: var(--vermeg-primary) !important;
+}
+
+.MuiLinearProgress-colorPrimary .MuiLinearProgress-bar {
+  background: var(--vermeg-gradient-primary) !important;
+}
+
+.MuiSkeleton-root {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+.MuiSkeleton-wave::after {
+  background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.2), transparent) !important;
+}
+
+/* Overrides pour les composants Material UI en mode chargement */
+.MuiButton-root.Mui-disabled {
+  background-color: rgba(220, 38, 38, 0.12) !important;
+  color: rgba(220, 38, 38, 0.26) !important;
+}
+
+.MuiTextField-root .MuiInputBase-root.Mui-disabled {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* ===== SCROLLBAR PERSONNALISÉE ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f3f4f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* ===== KEYFRAMES POUR LES ANIMATIONS ===== */
+@keyframes loading-bar-slide {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes vermeg-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes skeleton-wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes dots-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ===== ANIMATIONS DE TRANSITION ===== */
+
+/* Animations spécifiques Vermeg pour les transitions */
+.fade-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+.slide-up-enter {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.slide-up-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 300ms ease-out, opacity 300ms ease-out;
+}
+
+/* ===== CLASSES UTILITAIRES ===== */
+
+/* Classes utilitaires supplémentaires */
+.loading-overlay {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(2px);
+}
+
+.loading-overlay-dark {
+  background: rgba(31, 41, 55, 0.95);
+  backdrop-filter: blur(2px);
+}
+
+/* Améliorations pour les formulaires en état de chargement */
+.form-loading .MuiInputBase-root {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.form-loading .MuiButton-root {
+  pointer-events: none;
+}
+
+/* Styles pour les cartes skeleton */
+.card-skeleton {
+  animation: skeleton-card-pulse 2s ease-in-out infinite;
+}
+
+@keyframes skeleton-card-pulse {
+  0%, 100% {
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+  }
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+/* Responsive adjustments pour mobile */
+@media (max-width: 640px) {
+  .loading-fullscreen .vermeg-logo {
+    font-size: 2.5rem !important;
+  }
+  
+  .loading-fullscreen .loading-progress {
+    width: 200px !important;
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+/* Accessibility - Respecter les préférences utilisateur */
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar,
+  .loading-pulse,
+  .skeleton-wave,
+  .skeleton-dark,
+  .dots-vermeg,
+  .spin-slow,
+  .breathe,
+  .MuiCircularProgress-root,
+  .MuiLinearProgress-root {
+    animation: none !important;
+  }
+  
+  .skeleton-wave,
+  .skeleton-dark {
+    background: #f0f0f0 !important;
+  }
+  
+  .MuiSkeleton-wave::after {
+    animation: none !important;
+  }
+}
+
+/* ===== DARK MODE SUPPORT ===== */
+
+/* Dark mode support pour les skeletons */
+@media (prefers-color-scheme: dark) {
+  .skeleton-wave {
+    background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%) !important;
+  }
+  
+  .MuiSkeleton-root {
+    background-color: rgba(75, 85, 99, 0.3) !important;
+  }
+}
+
+/* ===== ROLE-BASED ENHANCEMENTS ===== */
+
+/* Enhanced animations for role-based UI */
+@keyframes roleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes roleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility classes for role-based animations */
+.animate-role-slide-in {
+  animation: roleSlideIn 0.3s ease-out;
+}
+
+.animate-role-fade-in {
+  animation: roleFadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Enhanced responsive design for role-based UI */
+@media (max-width: 768px) {
+  .card-enhanced {
+    border-radius: 8px;
+    margin: 0 4px;
+  }
+
+  .hover-lift:hover {
+    transform: none;
+  }
+
+  .btn-role-primary,
+  .btn-role-secondary {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Accessibility improvements for role-based UI */
+.focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Print styles for role-based content */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .card-enhanced {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+
+  .btn-role-primary,
+  .btn-role-secondary {
+    background: white !important;
+    color: black !important;
+    border: 1px solid black !important;
+  }
+}

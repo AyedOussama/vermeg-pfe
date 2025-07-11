@@ -1,0 +1,241 @@
+server:
+  port: 7004
+  tomcat:
+    uri-encoding: UTF-8
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+spring:
+  application:
+    name: job-requisition-service
+
+  # Configuration base de données
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:vermeg_requisitions}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  # Configuration JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate # Changé à validate pour utiliser Flyway
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        type:
+          preferred_enum_jdbc_type: VARCHAR
+    open-in-view: false
+
+  # Configuration Flyway
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Configuration Spring Cloud Stream avec RabbitMQ Stream
+  cloud:
+    function:
+      definition: processStatusChangeEvent;processApprovalEvent;processCancellationEvent;processFulfillmentEvent
+    stream:
+      binders:
+        rabbitmq-stream:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: ${RABBITMQ_HOST:localhost}
+                port: ${RABBITMQ_PORT:5672}
+                username: ${RABBITMQ_USERNAME:guest}
+                password: ${RABBITMQ_PASSWORD:guest}
+                virtual-host: ${RABBITMQ_VHOST:/}
+                stream:
+                  enabled: true
+      bindings:
+        processStatusChangeEvent-out-0:
+          destination: vermeg.recruitment.requisition-status
+          group: requisition-status-group
+          binder: rabbitmq-stream
+        processApprovalEvent-out-0:
+          destination: vermeg.recruitment.requisition-approved
+          group: requisition-approved-group
+          binder: rabbitmq-stream
+        processCancellationEvent-out-0:
+          destination: vermeg.recruitment.requisition-cancelled
+          group: requisition-cancelled-group
+          binder: rabbitmq-stream
+        processFulfillmentEvent-out-0:
+          destination: vermeg.recruitment.requisition-fulfilled
+          group: requisition-fulfilled-group
+          binder: rabbitmq-stream
+      rabbit:
+        bindings:
+          processStatusChangeEvent-out-0:
+            producer:
+              exchangeType: topic
+              routingKeyExpression: '"requisition.status." + headers.eventType'
+          processApprovalEvent-out-0:
+            producer:
+              exchangeType: topic
+              routingKeyExpression: '"requisition.approved"'
+          processCancellationEvent-out-0:
+            producer:
+              exchangeType: topic
+              routingKeyExpression: '"requisition.cancelled"'
+          processFulfillmentEvent-out-0:
+            producer:
+              exchangeType: topic
+              routingKeyExpression: '"requisition.fulfilled"'
+        default:
+          consumer:
+            autoBindDlq: true
+            dlqTtl: 5000
+            dlqDeadLetterExchange: dlx
+
+  # Configuration de sécurité OAuth2/JWT
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+          issuer-uri: http://localhost:9090/realms/vermeg-Platform
+
+# Configuration Eureka pour la découverte de services
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    preferIpAddress: true
+
+# Custom RabbitMQ Properties (pour compatibilité avec les services existants)
+rabbitmq:
+  exchange:
+    name: vermeg.recruitment.exchange
+  queue:
+    requisition-status: vermeg.recruitment.requisition-status
+    requisition-approved: vermeg.recruitment.requisition-approved
+    requisition-cancelled: vermeg.recruitment.requisition-cancelled
+    requisition-fulfilled: vermeg.recruitment.requisition-fulfilled
+  routing:
+    requisition-status-key: requisition.status.*
+    requisition-approved-key: requisition.approved
+    requisition-cancelled-key: requisition.cancelled
+    requisition-fulfilled-key: requisition.fulfilled
+
+# Configuration Swagger/OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    operationsSorter: method
+    # Disable deep linking to avoid webjars paths
+    deepLinking: false
+    # Configure UI without webjars references
+    displayRequestDuration: true
+    displayOperationId: false
+    # Additional configurations
+    tryItOutEnabled: true
+    filter: true
+    disable-swagger-default-url: true
+  show-actuator: false
+  packages-to-scan: com.pfe2025.jobrequisitionservice.controller
+  # Ensure no webjars resources are loaded
+  use-management-port: false
+  default-produces-media-type: application/json
+
+# Configuration de Resilience4j pour la tolérance aux pannes
+resilience4j:
+  circuitbreaker:
+    instances:
+      eventPublisher:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+  retry:
+    instances:
+      eventPublisher:
+        maxRetryAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+      default:
+        maxRetryAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+  ratelimiter:
+    instances:
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+  timelimiter:
+    instances:
+      default:
+        timeoutDuration: 3s
+
+# Métriques et monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,flyway,env,configprops
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db,rabbit,diskSpace
+  health:
+    circuitbreakers:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# Configuration de logging
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %X{X-Request-ID}%n"
+  level:
+    root: INFO
+    com.pfe2025: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: INFO
+    org.springframework.security.web: DEBUG
+    org.springframework.cloud.stream: INFO
+    org.springframework.integration: INFO
+    io.github.resilience4j: INFO

@@ -1,0 +1,246 @@
+server:
+  port: 7007
+
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: interview-service
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:recruitment_interviews}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_enum_jdbc_type: VARCHAR
+    open-in-view: false
+
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 10000ms
+
+  # Cache Configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+    cache-names: interviews,slots,calendar,participants,feedbacks
+
+  # RabbitMQ Stream Configuration
+  cloud:
+    function:
+      definition: processInterviewRequested;processApplicationStatusChanged
+    stream:
+      bindings:
+        # Consumers
+        processInterviewRequested-in-0:
+          destination: vermeg.recruitment.interview-requested
+          group: interview-service-requests
+          consumer:
+            max-attempts: 3
+        processApplicationStatusChanged-in-0:
+          destination: vermeg.recruitment.application-status-changed
+          group: interview-service-status
+          consumer:
+            max-attempts: 3
+        # Publishers
+        interviewScheduledSupplier-out-0:
+          destination: vermeg.recruitment.interview-scheduled
+        interviewCompletedSupplier-out-0:
+          destination: vermeg.recruitment.interview-completed
+        interviewCanceledSupplier-out-0:
+          destination: vermeg.recruitment.interview-canceled
+      rabbit:
+        bindings:
+          processInterviewRequested-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+          processApplicationStatusChanged-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+        default:
+          consumer:
+            prefetch: 10
+            requeue-rejected: true
+
+  # Security Configuration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+          issuer-uri: http://localhost:9090/realms/vermeg-Platform
+      client:
+        provider:
+          keycloak:
+            token-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/token
+            authorization-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/auth
+            user-info-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/userinfo
+            jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+        registration:
+          internal-client:
+            provider: keycloak
+            client-id: ${INTERNAL_CLIENT_ID:interview-service-client}
+            client-secret: ${INTERNAL_CLIENT_SECRET:pO920UFCCMK03uH59DLSzJxS6yA0DISb}
+            authorization-grant-type: client_credentials
+
+
+# Eureka Configuration
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 30
+
+# OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    disable-swagger-default-url: true
+    display-request-duration: true
+  packages-to-scan: com.pfe2025.interview_service.controller
+
+# Resilience4j Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      applicationServiceClient:
+        register-health-indicator: true
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 10s
+        failure-rate-threshold: 50
+      googleCalendarClient:
+        register-health-indicator: true
+        sliding-window-size: 8
+        permitted-number-of-calls-in-half-open-state: 2
+        wait-duration-in-open-state: 15s
+        failure-rate-threshold: 40
+  retry:
+    instances:
+      default:
+        max-retry-attempts: 3
+        wait-duration: 1000
+        enable-exponential-backoff: true
+      googleCalendarClient:
+        max-retry-attempts: 3
+        wait-duration: 2000
+        enable-exponential-backoff: true
+  bulkhead:
+    instances:
+      default:
+        max-concurrent-calls: 10
+        max-wait-duration: 3s
+      googleCalendarClient:
+        max-concurrent-calls: 5
+        max-wait-duration: 5s
+
+# Metrics and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,flyway,env,configprops,caches
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db,rabbit,redis,diskSpace
+  health:
+    circuitbreakers:
+      enabled: true
+    redis:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# Application Configuration
+app:
+  google:
+    calendar:
+      client-id: ${GOOGLE_CLIENT_ID:1034728819702-9jr477p56qubffj3hqam4npt4dc77fnc.apps.googleusercontent.com}
+      client-secret: ${GOOGLE_CLIENT_SECRET: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}
+      redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:7007/oauth2/callback/google}
+      scope: https://www.googleapis.com/auth/calendar,https://www.googleapis.com/auth/userinfo.email
+      application-name: Vermeg Recruitment Platform
+
+  integration:
+    application-service:
+      base-url: ${APPLICATION_SERVICE_URL:http://application-service}
+      timeout-seconds: 10
+
+  scheduler:
+    calendar-sync-cron: "0 */15 * * * ?" # Every 15 minutes
+    interview-reminder-cron: "0 0 8 * * ?" # Daily at 8 AM
+    slot-expiration-cron: "0 0 0 * * ?" # Daily at midnight
+    cleanup-cron: "0 0 3 * * ?" # Daily at 3 AM
+
+# Logging Configuration
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %X{X-Request-ID}%n"
+  level:
+    root: INFO
+    com.pfe2025.interview_service: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+    org.springframework.security: INFO
+    org.springframework.cloud.stream: INFO
+    com.google.api: INFO
+    org.springframework.cache: DEBUG

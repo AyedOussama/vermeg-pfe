@@ -1,0 +1,137 @@
+
+
+
+services:
+  # --- Service PostgreSQL ---
+  postgres:
+    container_name: ms_pg_sql
+    image: postgres:16.2-alpine
+    environment:
+      POSTGRES_USER: postgres # Utiliser .env
+      POSTGRES_PASSWORD: postgres # Utiliser .env
+
+      POSTGRES_DB: keycloak_security # Base pour Keycloak (selon config Keycloak)
+
+
+    volumes:
+      - ./docker/postgres-data:/var/lib/postgresql/data
+
+    ports:
+      - "5432:5432"
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+    healthcheck: # <-- HEALTHCHECK AJOUTÉ/CORRIGÉ
+      # Teste si la base de données spécifiée (ici celle de Keycloak par défaut, adaptez si besoin) est prête
+      test: ["CMD-SHELL", "pg_isready -U postgres -d keycloak_security"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Service Keycloak ---
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest # Version spécifique
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_security # Doit correspondre à POSTGRES_DB ou être créée par init-db.sql
+      KC_DB_USERNAME: postgres # Utiliser .env
+      KC_DB_PASSWORD: postgres # Utiliser .env
+      KC_HOSTNAME: localhost # Pour accès navigateur local
+      KEYCLOAK_ADMIN: admin # Utiliser .env
+      KEYCLOAK_ADMIN_PASSWORD: admin # Utiliser .env
+    ports:
+      - "9090:8080"
+    volumes:
+      - ./docker/keycloak_data:/opt/keycloak/data/import # Pour realm.json
+    depends_on:
+      postgres: # <-- DÉPENDANCE CONDITIONNELLE AJOUTÉE/CORRIGÉE
+        condition: service_healthy # Attend que le healthcheck de Postgres passe
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+
+
+
+  # --- Service MinIO ---
+  minio:
+    image: minio/minio
+    container_name: ms_minio
+    environment:
+      MINIO_ROOT_USER: minioadmin # Utiliser .env
+      MINIO_ROOT_PASSWORD: minioadmin # Utiliser .env
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./docker/minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+    # healthcheck: # Vous pourriez ajouter un healthcheck pour MinIO aussi
+
+  # --- Service MongoDB ---
+  mongodb:
+    image: mongo # Version spécifique
+    container_name: ms_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin # Utiliser .env
+      MONGO_INITDB_ROOT_PASSWORD: admin # Utiliser .env
+      MONGO_INITDB_DATABASE: vermegPlatform # Base de données initiale
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./docker/mongo_data:/data/db
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+    # healthcheck: # Vous pourriez ajouter un healthcheck pour Mongo
+
+  # --- Service Redis ---
+  redis:
+    image: redis:8.0-rc1-bookworm # Version spécifique
+    container_name: ms_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/redis_data:/data
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+    healthcheck: # Healthcheck existant (bon !)
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Service RabbitMQ ---
+  rabbitmq:
+    image: rabbitmq:3.13.0-management
+    container_name: ms_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest # Utiliser .env
+      RABBITMQ_DEFAULT_PASS: guest # Utiliser .env
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./docker/rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - vermeg-network
+    restart: unless-stopped
+    healthcheck: # Healthcheck existant (bon !)
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+
+
+networks:
+  vermeg-network:
+    driver: bridge
+

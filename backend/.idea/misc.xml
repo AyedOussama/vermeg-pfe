@@ -1,0 +1,31 @@
+<project version="4">
+  <component name="Black">
+    <option name="sdkName" value="Python 3.11 (ai-processing-service)" />
+  </component>
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
+  <component name="FrameworkDetectionExcludesConfiguration">
+    <type id="django" />
+  </component>
+  <component name="MavenProjectsManager">
+    <option name="originalFiles">
+      <list>
+        <option value="$PROJECT_DIR$/discovery-service/pom.xml" />
+        <option value="$PROJECT_DIR$/auth-service/pom.xml" />
+        <option value="$PROJECT_DIR$/Api-Gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/user-service/pom.xml" />
+        <option value="$PROJECT_DIR$/job-requisiting-service/pom.xml" />
+        <option value="$PROJECT_DIR$/job-requisition-service/pom.xml" />
+        <option value="$PROJECT_DIR$/document_management_service/pom.xml" />
+        <option value="$PROJECT_DIR$/job-posting-service/pom.xml" />
+        <option value="$PROJECT_DIR$/candidate-service/pom.xml" />
+        <option value="$PROJECT_DIR$/document-management-service/pom.xml" />
+        <option value="$PROJECT_DIR$/ai-processing-service/pom.xml" />
+        <option value="$PROJECT_DIR$/application-service/pom.xml" />
+        <option value="$PROJECT_DIR$/interview-service/pom.xml" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_20" project-jdk-name="17" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>

@@ -1,0 +1,299 @@
+server:
+  port: 7006
+  tomcat:
+    max-threads: 200
+    connection-timeout: 10000
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: application-service
+
+  # Configuration PostgreSQL
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:vermeg_applications}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  # Configuration JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_enum_jdbc_type: VARCHAR
+    open-in-view: false
+
+  # Configuration Flyway
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Configuration Redis pour le cache
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 10000
+
+  # Configuration du cache
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+    cache-names: applications, evaluations, metrics, settings
+
+  # Configuration Spring Cloud Stream (RabbitMQ)
+  cloud:
+    function:
+      definition: processApplicationEvaluated;processApplicationSubmitted;processApplicationStatusChanged;applicationMetricsSupplier
+    stream:
+      bindings:
+        # Consumers
+        processApplicationEvaluated-in-0:
+          destination: vermeg.recruitment.application-evaluated
+          group: application-service-evaluation
+          consumer:
+            max-attempts: 3
+        processApplicationSubmitted-in-0:
+          destination: vermeg.recruitment.application-submitted
+          group: application-service-submission
+          consumer:
+            max-attempts: 3
+        processApplicationStatusChanged-in-0:
+          destination: vermeg.recruitment.application-status-changed
+          group: application-service-status
+          consumer:
+            max-attempts: 3
+        # Publishers
+        applicationCreatedSupplier-out-0:
+          destination: vermeg.recruitment.application-created
+        applicationEvaluationRequestedSupplier-out-0:
+          destination: vermeg.recruitment.application-evaluation-requested
+        applicationStatusChangedSupplier-out-0:
+          destination: vermeg.recruitment.application-status-changed
+        applicationMetricsSupplier-out-0:
+          destination: vermeg.recruitment.application-metrics
+      rabbit:
+        bindings:
+          processApplicationEvaluated-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+          processApplicationSubmitted-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+          processApplicationStatusChanged-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+        default:
+          consumer:
+            prefetch: 10
+            requeue-rejected: true
+
+  # Configuration de sécurité OAuth2/JWT
+  security:
+    oauth2:
+      # Resource server configuration (pour l'authentification entrante)
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+          issuer-uri: http://localhost:9090/realms/vermeg-Platform
+
+      # Client registration (pour l'authentification sortante entre services)
+      client:
+        provider:
+          keycloak:
+            token-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/token
+            authorization-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/auth
+            user-info-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/userinfo
+            jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+
+        registration:
+          internal-client:
+            provider: keycloak
+            client-id: ${INTERNAL_CLIENT_ID:application-service-client}
+            client-secret: ${INTERNAL_CLIENT_SECRET:cEtE8Qnkxib7BG7vaTv5UhYoTQIoQ4Hn}
+            authorization-grant-type: client_credentials
+
+
+
+
+          document-client:
+            provider: keycloak
+            client-id: ${DOCUMENT_CLIENT_ID:document-client}
+            client-secret: ${DOCUMENT_CLIENT_SECRET:UqgZMxgsKyh9gDRFLJC3T7rHSAOxvEFY}
+            authorization-grant-type: client_credentials
+
+
+
+# Configuration Eureka pour la découverte de services
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    preferIpAddress: true
+    lease-renewal-interval-in-seconds: 30
+
+# Configuration Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    swagger-ui:
+        path: /swagger-ui.html
+        config-url: /v3/api-docs/swagger-config
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    disable-swagger-default-url: true
+    display-request-duration: true
+  packages-to-scan: com.pfe2025.application_service.controller
+
+# Configuration de Resilience4j
+resilience4j:
+  circuitbreaker:
+    instances:
+      candidateServiceClient:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      jobPostingServiceClient:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      aiServiceClient:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+  retry:
+    instances:
+      default:
+        maxRetryAttempts: 3
+        waitDuration: 1000
+        enableExponentialBackoff: true
+      aiServiceClient:
+        maxRetryAttempts: 3
+        waitDuration: 2000
+        enableExponentialBackoff: true
+  bulkhead:
+    instances:
+      default:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 2s
+      aiServiceClient:
+        maxConcurrentCalls: 5
+        maxWaitDuration: 3s
+
+# Métriques et monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,flyway,env,configprops,caches
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db,rabbit,redis,diskSpace
+  health:
+    circuitbreakers:
+      enabled: true
+    redis:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# Configuration spécifique de l'application
+app:
+  # Configuration AI
+  ai:
+    evaluation:
+      enabled: true
+      model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+      timeout-seconds: 20
+      auto-threshold-accept: 85.0
+      auto-threshold-reject: 40.0
+      api-key: ${AI_API_KEY:tgp_v1_Ndqkca6vmITRkuFG1fHSieozi0n2hVL-AmVlPHLeDEY}
+
+
+  # Configuration des intégrations
+  integration:
+    candidate-service:
+      base-url: ${CANDIDATE_SERVICE_URL:http://localhost:7003}
+      timeout-seconds: 10
+    document-service:
+      base-url: ${DOCUMENT_SERVICE_URL:http://localhost:7010}
+      timeout-seconds: 10
+    job-posting-service:
+      base-url: ${JOB_POSTING_SERVICE_URL:http://localhost:7005}
+      timeout-seconds: 10
+    interview-service:
+      base-url: ${INTERVIEW_SERVICE_URL:http://localhost:7018}
+      timeout-seconds: 10
+    ai-service:
+      base-url: https://api.together.xyz/v1
+      timeout-seconds: 20
+
+  # Configuration des tâches planifiées
+  scheduler:
+    metrics-generation-cron: "0 0 1 * * ?" # Tous les jours à 1h du matin
+    auto-evaluation-cron: "0 */15 * * * ?" # Toutes les 15 minutes
+    status-update-cron: "0 */30 * * * ?" # Toutes les 30 minutes
+
+# Configuration de logging
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %X{X-Request-ID}%n"
+  level:
+    root: INFO
+    com.pfe2025.application_service: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+    org.springframework.security: INFO
+    org.springframework.security.web: DEBUG
+    org.springframework.cloud.stream: INFO
+    org.springframework.integration: INFO
+    io.github.resilience4j: INFO
+    org.springframework.data.redis: INFO
+    org.springframework.cache: DEBUG

@@ -1,0 +1,99 @@
+server:
+  port: 7001
+  error:
+    include-message: always
+    include-binding-errors: always
+
+spring:
+  application:
+    name: auth-service
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}
+          jwk-set-uri: ${KEYCLOAK_URL:http://localhost:9090}/realms/${KEYCLOAK_REALM:vermeg-Platform}/protocol/openid-connect/certs
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2000ms
+
+keycloak:
+  auth-server-url: ${KEYCLOAK_URL:http://localhost:9090}
+  realm: ${KEYCLOAK_REALM:vermeg-Platform}
+  resource: ${KEYCLOAK_CLIENT_ID:gateway-client}
+  credentials:
+    secret: ${KEYCLOAK_CLIENT_SECRET:NcZPp1SjdZcKpCboLwLgTp9NXOQ1QR2i}
+  admin-username: ${KEYCLOAK_ADMIN_USERNAME:admin}
+  admin-password: ${KEYCLOAK_ADMIN_PASSWORD:admin}
+
+app:
+  cookies:
+    access-token-name: "access_token"
+    refresh-token-name: "refresh_token"
+    domain: ""
+    path: "/"
+    secure: ${COOKIE_SECURE:false}
+    same-site: "Lax"
+    access-token-max-age: 900      # 15 minutes
+    refresh-token-max-age: 86400   # 24 heures
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    preferIpAddress: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+
+logging:
+  level:
+    root: INFO
+    com.PFE2025: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.reactive: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  # Configuration de base
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    # Pour que les cookies fonctionnent dans Swagger UI
+    with-credentials: true
+    # Tri des endpoints
+    operations-sorter: method
+    tags-sorter: alpha
+    # Essayer automatiquement avec les exemples
+    try-it-out-enabled: true
+  # Désactiver les fonctionnalités problématiques
+  show-actuator: false
+  use-management-port: false
+  # Scanner uniquement vos controllers
+  packages-to-scan: com.PFE2025.auth_service.controller
+  paths-to-match: /auth/**

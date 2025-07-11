@@ -1,0 +1,26 @@
+server:
+  port: 7002
+
+spring:
+  application:
+    name: user-service
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: vermegPlatform
+      username: admin
+      password: admin
+      authentication-database: admin
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9090/realms/vermeg-Platform
+
+auth-service:
+  url: http://localhost:7001
+
+logging:
+  level:
+    com.PFE2025.user_service: DEBUG

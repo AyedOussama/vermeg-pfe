@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/Api-Gateway/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ai-processing-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/application-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/auth-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/candidate-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/discovery-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/document-management-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/document-management-service/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/interview-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/job-posting-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/job-requisition-service/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/user-service/src/main/java" charset="UTF-8" />
+  </component>
+</project>

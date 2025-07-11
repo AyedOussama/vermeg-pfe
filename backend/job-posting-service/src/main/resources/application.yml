@@ -1,0 +1,273 @@
+server:
+  port: 7005
+  tomcat:
+    uri-encoding: UTF-8
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+spring:
+  application:
+    name: job-posting-service
+
+  # Configuration base de données
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:vermeg_jobposts}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      max-lifetime: 1200000
+
+  # Configuration JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Utilisation de Flyway pour les migrations
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_enum_jdbc_type: VARCHAR
+    open-in-view: false
+
+  # Configuration Flyway
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  # Configuration Redis pour le cache
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 10000
+
+  # Configuration du cache
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+    cache-names: jobPosts, templates, metrics
+
+  # Configuration Spring Cloud Stream avec RabbitMQ
+  cloud:
+    function:
+      definition: processRequisitionApproved;processApplicationSubmitted;processRequisitionCancelled
+    stream:
+      binders:
+        rabbitmq-stream:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: ${RABBITMQ_HOST:localhost}
+                port: ${RABBITMQ_PORT:5672}
+                username: ${RABBITMQ_USERNAME:guest}
+                password: ${RABBITMQ_PASSWORD:guest}
+                virtual-host: ${RABBITMQ_VHOST:/}
+                stream:
+                  enabled: true
+      bindings:
+        processRequisitionApproved-in-0:
+          destination: vermeg.recruitment.requisition-approved
+          group: job-posting-requisition-approved
+          binder: rabbitmq-stream
+          consumer:
+            max-attempts: 3
+        processApplicationSubmitted-in-0:
+          destination: vermeg.recruitment.application-submitted
+          group: job-posting-application-submitted
+          binder: rabbitmq-stream
+          consumer:
+            max-attempts: 3
+        processRequisitionCancelled-in-0:
+          destination: vermeg.recruitment.requisition-cancelled
+          group: job-posting-requisition-cancelled
+          binder: rabbitmq-stream
+          consumer:
+            max-attempts: 3
+        processApplicationMetrics-in-0:
+          destination: vermeg.recruitment.application-metrics
+          group: job-posting-service-metrics
+          consumer:
+            max-attempts: 3
+      rabbit:
+        bindings:
+          processRequisitionApproved-in-0:
+            consumer:
+              bind-queue: true
+              queue-name-group-only: true
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+              dlq-dead-letter-exchange: dlx
+          processApplicationSubmitted-in-0:
+            consumer:
+              bind-queue: true
+              queue-name-group-only: true
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+              dlq-dead-letter-exchange: dlx
+          processRequisitionCancelled-in-0:
+            consumer:
+              bind-queue: true
+              queue-name-group-only: true
+              auto-bind-dlq: true
+              dlq-ttl: 10000
+              dlq-dead-letter-exchange: dlx
+        default:
+          consumer:
+            prefetch: 10
+            requeue-rejected: true
+
+  # Configuration de sécurité OAuth2/JWT
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9090/realms/vermeg-Platform/protocol/openid-connect/certs
+          issuer-uri: http://localhost:9090/realms/vermeg-Platform
+
+# Configuration Eureka pour la découverte de services
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka}
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    preferIpAddress: true
+
+# Configuration Swagger/OpenAPI
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    operationsSorter: method
+    # Disable deep linking to avoid webjars paths
+    deepLinking: false
+    # Configure UI without webjars references
+    displayRequestDuration: true
+    displayOperationId: false
+    # Additional configurations
+    tryItOutEnabled: true
+    filter: true
+    disable-swagger-default-url: true
+  show-actuator: false
+  packages-to-scan: com.pfe2025.jobpostingservice.controller
+  # Ensure no webjars resources are loaded
+  use-management-port: false
+  default-produces-media-type: application/json
+
+# Configuration de Resilience4j
+resilience4j:
+  circuitbreaker:
+    instances:
+      togetherAiClient:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+  retry:
+    instances:
+      togetherAiClient:
+        maxRetryAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+      default:
+        maxRetryAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+  ratelimiter:
+    instances:
+      togetherAiClient:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+      default:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+  timelimiter:
+    instances:
+      togetherAiClient:
+        timeoutDuration: 5s
+      default:
+        timeoutDuration: 3s
+
+# Configuration Together.AI
+app:
+  ai:
+    together-api-key: ${TOGETHER_API_KEY:demo-key}
+    together-api-url: ${TOGETHER_API_URL:https://api.together.xyz/v1/chat/completions}
+    model: ${TOGETHER_AI_MODEL:meta-llama/Llama-3.3-70B-Instruct-Turbo-Free}
+    enabled: ${TOGETHER_AI_ENABLED:true}
+
+# Métriques et monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,flyway,env,configprops,caches
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db,rabbit,redis,diskSpace
+  health:
+    circuitbreakers:
+      enabled: true
+    redis:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# Configuration de logging
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %X{X-Request-ID}%n"
+  level:
+    root: INFO
+    com.vermeg.recruiting: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: INFO
+    org.springframework.security.web: DEBUG
+    org.springframework.cloud.stream: INFO
+    org.springframework.integration: INFO
+    io.github.resilience4j: INFO
+    org.springframework.data.redis: INFO
+    org.springframework.cache: DEBUG
